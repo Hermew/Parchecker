@@ -127,7 +127,16 @@ uso programático.
 cargo build --release
 ```
 
-Necesita las Build Tools de C++ para el enlazador (o el toolchain GNU).
+Necesita un enlazador. **Usá el toolchain MSVC**, que es el que `rustup` elige
+por defecto en Windows: pide las Build Tools de C++ —`rustup-init` ofrece
+instalarlas solo— y a cambio no aparece ninguna sorpresa.
+
+> [!WARNING]
+> El toolchain GNU **no es un reemplazo equivalente**, aunque baje mucho menos.
+> Pide dos cosas más, las dos obligatorias: un MinGW-w64 completo aparte —al de
+> `rustup` le falta `dlltool`— instalado en una ruta sin espacios. El
+> procedimiento está en
+> [INSTALACION.md](../INSTALACION.md#camino-2--rust-sobre).
 
 Si el repo te queda dentro de una carpeta que sincroniza a la nube, conviene
 sacar los artefactos de ahí: `target/` pesa cientos de megas y cambia en cada

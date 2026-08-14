@@ -136,6 +136,7 @@ El código no fija la constante: lee la ANSI real del sistema con `GetACP()`.
 | `sobre/` | La misma idea en Rust, sin depender de WinRAR |
 | `tools/higiene.py` | Caza caracteres invisibles antes de cada commit |
 | `tools/BuscarFuga.ps1` | Busca tu clave donde no debería estar, sin filtrarla |
+| `tools/Comprobar.ps1` | Revisa el entorno y dice cómo arreglar lo que falte |
 | `pruebas/` | El roundtrip completo, sin abrir la ventana |
 
 El `askpass` **no sabe para qué se usa el secreto**. Lo pide, lo entrega y se va.
@@ -312,11 +313,19 @@ Si su máquina ya está tomada, esto no la salva. Ninguna otra cosa tampoco.
 | Python | 3.8+ |
 | PowerShell | 5.1, el que ya viene con Windows |
 
+Para el binario en Rust, el toolchain está en [`sobre/`](sobre/README.md#compilar).
+
+> [!TIP]
+> Instalación paso a paso en una máquina limpia, los dos caminos y las ocho
+> reglas que tiene que cumplir el entorno:
+> **[INSTALACION.md](INSTALACION.md)**.
+
 ---
 
 ## Verificación
 
 ```bash
+.\tools\Comprobar.ps1               # el entorno, con el arreglo de lo que falte
 python pruebas/test_roundtrip.py    # 21 chequeos, sin abrir la ventana
 python tools/higiene.py .           # tiene que salir limpio
 ```
@@ -336,7 +345,11 @@ son invisibles en el editor pero cambian los bytes. Rompen diffs, hacen que `gre
 no encuentre lo que está ahí, y a veces revientan el parser.
 
 `tools/higiene.py` corre en cada commit vía hook de pre-commit y frena el commit
-si encuentra alguno. Distingue lo legítimo: el BOM de un `.ps1` es obligatorio
+si encuentra alguno. El hook está versionado en `tools/hooks/`, pero **git no
+clona los hooks**: hay que activarlo una vez por clon con
+`git config core.hooksPath tools/hooks` (ver [INSTALACION.md](INSTALACION.md)).
+
+Distingue lo legítimo: el BOM de un `.ps1` es obligatorio
 —sin él, PowerShell 5.1 lee el script como ANSI y rompe los acentos— y un
 selector de variación pegado a un emoji es parte del emoji.
 

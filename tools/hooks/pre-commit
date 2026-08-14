@@ -1,0 +1,13 @@
+#!/bin/sh
+# Frena el commit si hay caracteres invisibles en los archivos de texto.
+#
+# Se activa una vez por clon:  git config core.hooksPath tools/hooks
+# Por que existe: ver README.md, "Por que hay un cazador de caracteres invisibles".
+
+if ! command -v python >/dev/null 2>&1; then
+    echo "pre-commit: no encontre python, no pude revisar los caracteres invisibles." >&2
+    echo "            Instalalo (ver INSTALACION.md) o commitea con --no-verify." >&2
+    exit 1
+fi
+
+python tools/higiene.py . || exit 1
