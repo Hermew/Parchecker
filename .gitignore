@@ -1,0 +1,12 @@
+# Archivos de prueba: pueden tener contrasenas reales adentro.
+*.rar
+prueba-*.rar
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# Windows
+Thumbs.db
+desktop.ini

@@ -1,0 +1,9 @@
+/target
+
+# artefactos (ya redirigidos por .cargo/config.toml, por las dudas)
+/target
+*.sobre
+*.age
+
+# Preferencia local: la ruta del target-dir lleva el usuario adentro.
+.cargo/config.toml

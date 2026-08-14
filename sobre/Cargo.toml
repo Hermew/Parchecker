@@ -1,0 +1,22 @@
+[package]
+name = "sobre"
+version = "0.1.0"
+edition = "2024"
+description = "Archivo cifrado con una clave que nunca toca la linea de comandos"
+license = "Apache-2.0"
+repository = "https://github.com/Hermew/Parchecker"
+readme = "README.md"
+keywords = ["encryption", "age", "password", "stdin", "security"]
+categories = ["command-line-utilities", "cryptography"]
+
+[dependencies]
+# Una sola dependencia directa, a proposito. age ya trae secrecy adentro
+# (se usa como age::secrecy::SecretString), asi que declararla aparte solo
+# agregaba superficie sin agregar nada.
+age = "0.12.1"
+
+[profile.release]
+lto = true            # mas rapido y mas chico
+codegen-units = 1     # mejor optimizacion a costa de tiempo de compilacion
+strip = true          # sin simbolos de depuracion
+panic = "abort"       # no hace falta desenrollar la pila en una CLI
