@@ -24,6 +24,7 @@ use std::io::{self, BufReader, BufWriter, Read, Write};
 use std::path::Path;
 use std::process::ExitCode;
 
+use age::secrecy::zeroize::Zeroizing;
 use age::secrecy::SecretString;
 
 const AYUDA: &str = "\
@@ -141,23 +142,44 @@ fn parsear() -> Result<Option<Opciones>, Box<dyn std::error::Error>> {
 /// Esto es lo que Python no podia hacer: alla un `str` es inmutable y queda en el
 /// heap hasta que el recolector se digne. Aca `SecretString` sobreescribe con
 /// ceros cuando sale de alcance, sin que haya que acordarse.
+///
+/// Pero el SecretString es el final del camino, no el camino entero. Antes de
+/// llegar ahi la clave pasa por los buffers donde se la lee y se la convierte, y
+/// esos son Vec y String comunes: se liberan sin borrarse, asi que el contenido
+/// queda en el heap hasta que otra cosa lo pise. Por eso cada paso intermedio va
+/// envuelto en `Zeroizing`, que hace lo mismo que `SecretString` pero para un
+/// buffer cualquiera.
+///
+/// El crate da la herramienta, no la garantia: hay que seguir el dato por todos
+/// los lugares por donde pasa.
 fn leer_clave(utf16le: bool) -> Result<SecretString, Box<dyn std::error::Error>> {
     let mut crudo = Vec::new();
     io::stdin()
         .read_to_end(&mut crudo)
         .map_err(|e| format!("no pude leer la clave de stdin: {e}"))?;
+    // Desde aca los bytes crudos se borran solos, salga como salga la funcion.
+    let crudo = Zeroizing::new(crudo);
 
     let mut texto = if utf16le {
         if crudo.len() % 2 != 0 {
             return Err("la clave en UTF-16LE tiene un numero impar de bytes".into());
         }
-        let unidades: Vec<u16> = crudo
-            .chunks_exact(2)
-            .map(|par| u16::from_le_bytes([par[0], par[1]]))
-            .collect();
+        // Este es el camino que usa Askpass.ps1, y el que mas copias hace: una
+        // para pasar a u16 y otra para pasar a String.
+        let unidades: Zeroizing<Vec<u16>> = Zeroizing::new(
+            crudo
+                .chunks_exact(2)
+                .map(|par| u16::from_le_bytes([par[0], par[1]]))
+                .collect(),
+        );
         String::from_utf16(&unidades).map_err(|_| "la clave no es UTF-16LE valido")?
     } else {
-        String::from_utf8(crudo).map_err(|_| "la clave no es UTF-8 valido")?
+        // Validar sin consumir y despues copiar. `String::from_utf8` seria una
+        // copia menos, pero cuando falla devuelve un error que se queda con los
+        // bytes adentro: la clave terminaria viajando dentro del error.
+        std::str::from_utf8(&crudo)
+            .map_err(|_| "la clave no es UTF-8 valido")?
+            .to_owned()
     };
 
     // Los saltos del final son del pipe, no de la clave. Adentro se respetan.

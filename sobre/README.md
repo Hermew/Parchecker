@@ -47,6 +47,43 @@ solo esta.
 `str` es inmutable y queda en el heap hasta que el recolector se digne — por eso
 en el proyecto original la parte sensible tenía que vivir en PowerShell.
 
+## El borrado va por todo el camino, no solo por el final
+
+`SecretString` cubre el lugar donde la clave descansa. Pero antes de llegar ahí
+pasa por los buffers en los que se la lee y se la convierte, y un `Vec` o un
+`String` común se liberan **sin borrarse**: el contenido queda en el heap hasta
+que otra cosa lo pise.
+
+Por eso cada paso intermedio va envuelto en `Zeroizing`, que hace lo mismo que
+`SecretString` para un buffer cualquiera:
+
+| Paso | Qué lo cubre |
+|---|---|
+| Los bytes crudos que llegan de stdin | `Zeroizing<Vec<u8>>` |
+| Las unidades de 16 bits, solo en `--utf16le` | `Zeroizing<Vec<u16>>` |
+| La cadena final | `SecretString` |
+
+El camino `--utf16le` es el que más importa, porque es el que usa `Askpass.ps1` y
+el que hace dos copias más que el otro: una para pasar de bytes a `u16` y otra
+para pasar de `u16` a texto.
+
+En el camino UTF-8 la validación es `str::from_utf8`, que mira sin consumir. La
+alternativa —`String::from_utf8`— ahorra una copia, pero cuando falla devuelve un
+error **que se queda con los bytes adentro**: la clave terminaría viajando dentro
+del mensaje de error, que es a donde va a parar todo lo que se imprime.
+
+No hace falta declarar `zeroize` aparte: `age` ya lo trae por debajo de `secrecy`
+y se usa como `age::secrecy::zeroize::Zeroizing`.
+
+> [!NOTE]
+> Esto no mueve el modelo de amenaza. Un volcado de memoria tomado **mientras** la
+> clave está en uso la encuentra igual, y el buffer del pipe del kernel también la
+> tuvo. Lo que se acorta es la ventana; no se cierra.
+>
+> La lección sirve para cualquier programa que toque un secreto: **el crate da la
+> herramienta, no la garantía.** Hay que seguir el dato por todos los lugares por
+> donde pasa.
+
 ## No hay `-p`
 
 ```
@@ -158,3 +195,11 @@ target-dir = "C:/Users/TU_USUARIO/AppData/Local/cargo-target/sobre"
 | Salida existente | no se pisa sin `--forzar` |
 | UTF-16LE de `Askpass.ps1` | roundtrip completo |
 | UTF-8 leído como UTF-16LE | falla, como debe |
+| Clave vacía por stdin | rechazada |
+| Formato | el archivo empieza con la cabecera de `age` |
+| Un sobre cerrado por UTF-8 abierto por UTF-16LE, y al revés | abre en los dos sentidos |
+| Lo mismo con una clave de 480 caracteres | abre en los dos sentidos |
+
+Los dos últimos son la prueba de que envolver los buffers intermedios en
+`Zeroizing` no cambió el valor que llega al cifrado: si los dos caminos de
+decodificación no derivaran exactamente la misma cadena, el sobre no abriría.
