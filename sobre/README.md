@@ -2,7 +2,7 @@
 
 **Encrypted files with a secret that never touches the command line.**
 
-A small binary. The passphrase is read from stdin and from nowhere else.
+A 0.8 MB binary. The passphrase is read from stdin and from nowhere else.
 
 ```
 sobre cifrar notas.txt notas.sobre
@@ -112,7 +112,7 @@ Content is streamed straight into the encryptor. Nothing is buffered whole, at a
 
 ## Padding
 
-An envelope is the size of its content plus a small constant, so its size describes what is inside. `--bloque` rounds the content up to a multiple before sealing.
+An envelope is the size of its content plus a header and 16 bytes per 64 KiB chunk, so its size describes what is inside. `--bloque` rounds the content up to a multiple before sealing.
 
 ```bash
 sobre cifrar --para age1... --bloque 4K v.txt r.sobre
@@ -144,7 +144,16 @@ Measured, one machine, x25519 recipient, `--bloque 4K`:
 
 Unpadded, the envelope tracks the content almost byte for byte. Padded, it does not.
 
-The padded column is not constant, and that is not the padding failing. `age` writes a **grease** stanza of random length into every header — a decoy that forces implementations to correctly ignore stanzas they do not recognise, the same anti-ossification trick TLS uses. Encrypting one unchanged file twelve times produced twelve different sizes spanning 4 328 to 4 415. The residual spread is noise that does not correlate with the content; the block is what carries the meaning.
+The padded column is not constant, and how constant it gets depends on which way the envelope was closed:
+
+| sealed with | one 100 B file, sealed 8 times, `--bloque 4K` |
+|---|---|
+| passphrase | 4 278 bytes, all eight |
+| `--para` | seven distinct sizes between 4 332 and 4 402 |
+
+`age` writes a **grease** stanza of random length into the header when recipients are used — a decoy that forces implementations to correctly ignore stanzas they do not recognise, the same anti-ossification trick TLS uses. An scrypt envelope must have exactly one recipient, so no decoy is added there and padding quantizes the size exactly.
+
+Where the decoy is present its spread is tens of bytes and does not correlate with the content: the block is what carries the meaning, the grease is noise on top of it.
 
 ---
 
