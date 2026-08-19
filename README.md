@@ -69,23 +69,23 @@ Se abre la ventana. Escribe la clave. Aparece el `.rar` cifrado.
 
 ---
 
-## El hallazgo
+## La clave entra por stdin
 
-El manual de WinRAR, sección del modificador `-p`:
+`rar.exe a -hp` **sin valor pegado** lee la contraseña por **stdin**. Ese es el
+mecanismo entero: viaja por un pipe en memoria y nunca aparece como argumento de
+proceso.
+
+Está en el manual de WinRAR, en la sección del modificador `-p`:
 
 > *"También puede usar redirecciones de fichero o flujos de entrada para
 > especificar la contraseña si falta el parámetro."*
-
-`rar.exe a -hp` **sin valor pegado** lee la clave por **stdin**. Ese es el
-mecanismo entero: la contraseña viaja por un pipe en memoria y jamás aparece como
-argumento de proceso.
 
 > [!IMPORTANT]
 > **7-Zip no puede hacer esto.** Exige `-pMiClave` como argumento, visible para
 > todo el sistema. Por eso acá el formato es `.rar`.
 
 <details>
-<summary><b>Dos trampas que solo aparecen probando</b></summary>
+<summary><b>Dos reglas que el manual no menciona</b></summary>
 
 <br>
 
@@ -268,9 +268,9 @@ terminal es rara:
 +======================================================+
 ```
 
-Detalle que se nota cuando está mal: los tees vienen en dos sabores. Si la línea
-que cruza es doble va `╠╣`, y si es simple va `╟╢`. Mezclarlos deja un diente
-visible en el borde.
+Los tees vienen en dos sabores y hay que usar el que corresponde: si la línea que
+cruza es doble va `╠╣`, y si es simple va `╟╢`. Mezclarlos deja un diente visible
+en el borde.
 
 Para verlo sin tipear nada: `.\askpass\AskpassConsola.ps1 -Demo`
 
